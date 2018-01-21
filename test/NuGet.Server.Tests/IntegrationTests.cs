@@ -57,6 +57,33 @@ namespace NuGet.Server.Tests
         }
 
         [Fact]
+        public async Task DownloadPackage()
+        {
+            // Arrange
+            using (var tc = new TestContext())
+            {
+                // Act & Assert
+                // 1. Write a package to the drop folder.
+                var packagePath = Path.Combine(tc.PackagesDirectory, "package.nupkg");
+                TestData.CopyResourceToPath(TestData.PackageResource, packagePath);
+                var expectedBytes = File.ReadAllBytes(packagePath);
+
+                // 2. Download the package.
+                using (var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"/nuget/Packages(Id='{TestData.PackageId}',Version='{TestData.PackageVersionString}')/Download"))
+                using (var response = await tc.Client.SendAsync(request))
+                {
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    var actualBytes = await response.Content.ReadAsByteArrayAsync();
+
+                    Assert.Equal("binary/octet-stream", response.Content.Headers.ContentType.ToString());
+                    Assert.Equal(expectedBytes, actualBytes);
+                }
+            }
+        }
+
+        [Fact]
         public async Task PushPackageThenReadPackages()
         {
             // Arrange
